@@ -1,6 +1,7 @@
 import cors from 'cors'
 import express from 'express'
 import multer from 'multer'
+import sharp from 'sharp'
 import JSZip from 'jszip'
 import { PDFDocument, StandardFonts, degrees, rgb } from 'pdf-lib'
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs'
@@ -30,7 +31,9 @@ app.post('/api/convert', upload.array('files', 20), async (request, response) =>
     if (tool === 'JPG to PDF') {
       const pdf = await PDFDocument.create()
       for (const file of files) {
-        const image = file.mimetype === 'image/png' ? await pdf.embedPng(file.buffer) : await pdf.embedJpg(file.buffer)
+        if (!file.mimetype.startsWith('image/')) return response.status(400).json({ error: 'JPG to PDF accepts image files only.' })
+        const normalizedImage = await sharp(file.buffer).png().toBuffer()
+        const image = await pdf.embedPng(normalizedImage)
         const page = pdf.addPage([595.28, 841.89])
         const scale = Math.min((page.getWidth() - 48) / image.width, (page.getHeight() - 48) / image.height)
         page.drawImage(image, { x: (page.getWidth() - image.width * scale) / 2, y: (page.getHeight() - image.height * scale) / 2, width: image.width * scale, height: image.height * scale })
@@ -111,7 +114,7 @@ app.post('/api/convert', upload.array('files', 20), async (request, response) =>
     }
   } catch (error) {
     console.error(error)
-    return response.status(422).json({ error: 'The file could not be processed. Check that it is a valid supported file.' })
+    return response.status(422).json({ error: error instanceof Error ? error.message : 'The file could not be processed. Check that it is a valid supported file.' })
   }
 })
 

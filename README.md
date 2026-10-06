@@ -4,7 +4,7 @@ A privacy-first PDF toolbox with a focused, responsive interface for everyday do
 
 ## Features
 
-Browser-supported tools currently include:
+The app currently exposes 16 working tools:
 
 - JPG and PNG to PDF
 - Merge PDF files
@@ -13,9 +13,14 @@ Browser-supported tools currently include:
 - Extract the first page
 - Rotate PDF pages
 - PDF to JPG ZIP export
+- Repair and compression
+- Organize, crop, rotate, watermark, and page numbering
+- PDF form-field creation
+- PDF comparison metadata
+- PDF to Markdown text extraction
 - File validation, progress feedback, and downloads
 
-The app refuses to create fake outputs for tools that need a server-side processor. Office conversion, OCR, AI, signing, encryption, and advanced editing are prepared in the catalog and can be connected to a backend later.
+The catalog hides tools that are not implemented yet, so users cannot download fake or incorrectly renamed files. Office conversion, OCR, AI, signing, encryption, and advanced editing require additional engines and are not currently shown.
 
 ## Run Locally
 

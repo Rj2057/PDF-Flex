@@ -11,12 +11,12 @@ The app currently exposes 18 working tools:
 - PDF to DOCX (server-side selectable-text extraction)
 - Merge PDF files
 - Split a PDF into a ZIP of page PDFs
-- Remove the first page
+- Remove the first page from a multi-page PDF
 - Extract the first page
 - Rotate PDF pages
 - PDF to JPG ZIP export
 - Repair and compression
-- Organize, crop, rotate, watermark, and page numbering
+- Normalize, crop, rotate, watermark, and page numbering
 - PDF form-field creation
 - PDF comparison metadata
 - PDF to Markdown text extraction

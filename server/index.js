@@ -17,6 +17,7 @@ const supportedTools = new Set(['JPG to PDF', 'WORD to PDF', 'PDF to WORD', 'Mer
 
 app.use(cors())
 app.get('/api/health', (_request, response) => response.json({ ok: true, service: 'pdf-flex-api' }))
+app.use((error, _request, response, next) => { if (error?.code === 'LIMIT_FILE_SIZE') return response.status(413).json({ error: 'Each file must be smaller than 100 MB.' }); if (error?.code === 'LIMIT_FILE_COUNT') return response.status(413).json({ error: 'You can upload up to 20 files at a time.' }); return next(error) })
 
 const pdfResponse = (response, bytes, filename) => response.type('application/pdf').attachment(filename).send(Buffer.from(bytes))
 const getPdf = (file) => PDFDocument.load(file.buffer)
@@ -130,6 +131,8 @@ app.post('/api/convert', upload.array('files', 20), async (request, response) =>
     return response.status(422).json({ error: error instanceof Error ? error.message : 'The file could not be processed. Check that it is a valid supported file.' })
   }
 })
+
+app.use((error, _request, response, _next) => { console.error(error); if (response.headersSent) return; response.status(422).json({ error: error instanceof Error ? error.message : 'The file could not be processed.' }) })
 
 const port = Number(process.env.PORT || 3001)
 app.listen(port, () => console.log(`PDFflex API running on http://localhost:${port}`))

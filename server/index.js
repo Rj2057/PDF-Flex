@@ -38,7 +38,7 @@ app.post('/api/convert', upload.array('files', 20), async (request, response) =>
       return pdfResponse(response, await docxToPdf(files[0]), 'word-to-pdf.pdf')
     }
     if (tool === 'PDF to WORD') {
-      if (files.length !== 1 || files[0].mimetype !== 'application/pdf') return response.status(400).json({ error: 'PDF to WORD accepts one PDF file.' })
+      if (files.length !== 1 || (files[0].mimetype !== 'application/pdf' && !/\.pdf$/i.test(files[0].originalname))) return response.status(400).json({ error: 'PDF to WORD accepts one PDF file.' })
       return response.type('application/vnd.openxmlformats-officedocument.wordprocessingml.document').attachment('pdf-to-word.docx').send(await pdfToDocx(files[0]))
     }
     if (tool === 'JPG to PDF') {

@@ -26,7 +26,7 @@ The catalog hides tools that are not implemented yet, so users cannot download f
 
 ## Run Locally
 
-Requirements: Node.js 20 or newer.
+Requirements: Node.js 24 or newer for the API and build environment.
 
 ```bash
 npm install
@@ -62,6 +62,8 @@ npm run preview
 GitHub Pages cannot run the Node PDF API. For server-side processing in production, deploy `server/index.js` separately on a Node host and proxy `/api` to it. The static app still includes browser fallbacks for the original browser-safe tools, while Word conversion requires the API.
 
 For a practical GitHub setup, keep the frontend on GitHub Pages and deploy the API to Render, Railway, Fly.io, or a small VPS. Set the API's CORS allowlist to the Pages origin, add rate limiting and object-storage cleanup before accepting public traffic, and keep uploads in memory or ephemeral storage only. Never commit sample documents, secrets, generated PDFs, or `.env` files.
+
+After deploying the API, add a GitHub Actions repository variable named `VITE_API_URL` under **Settings > Secrets and variables > Actions > Variables**. Set it to the API origin, for example `https://your-pdf-api.example.com`, without a trailing slash. Push to `main` again so Pages rebuilds with the API URL. For local development, leave it unset and `vite` will use the configured `/api` proxy.
 
 Your site will be available at:
 

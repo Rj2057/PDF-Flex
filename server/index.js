@@ -3,6 +3,8 @@ import express from 'express'
 import multer from 'multer'
 import sharp from 'sharp'
 import JSZip from 'jszip'
+import mammoth from 'mammoth'
+import { Document, HeadingLevel, Packer, Paragraph, TextRun } from 'docx'
 import { PDFDocument, StandardFonts, degrees, rgb } from 'pdf-lib'
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs'
 
@@ -11,7 +13,7 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 100 * 1024 * 1024, files: 20 },
 })
-const supportedTools = new Set(['JPG to PDF', 'Merge PDF', 'Split PDF', 'Remove pages', 'Extract pages', 'Rotate PDF', 'Repair PDF', 'Compress PDF', 'Organize PDF', 'Add page numbers', 'Add watermark', 'Crop PDF', 'PDF Forms', 'Compare PDF', 'PDF to Markdown'])
+const supportedTools = new Set(['JPG to PDF', 'WORD to PDF', 'PDF to WORD', 'Merge PDF', 'Split PDF', 'Remove pages', 'Extract pages', 'Rotate PDF', 'Repair PDF', 'Compress PDF', 'Organize PDF', 'Add page numbers', 'Add watermark', 'Crop PDF', 'PDF Forms', 'Compare PDF', 'PDF to Markdown'])
 
 app.use(cors())
 app.get('/api/health', (_request, response) => response.json({ ok: true, service: 'pdf-flex-api' }))
@@ -19,6 +21,9 @@ app.get('/api/health', (_request, response) => response.json({ ok: true, service
 const pdfResponse = (response, bytes, filename) => response.type('application/pdf').attachment(filename).send(Buffer.from(bytes))
 const getPdf = (file) => PDFDocument.load(file.buffer)
 const savePdf = async (response, document, filename, options = {}) => pdfResponse(response, await document.save(options), filename)
+const wrapText = (text, maxCharacters = 88) => { const words = text.split(/\s+/).filter(Boolean); const lines = []; let line = ''; for (const word of words) { if ((line + ' ' + word).trim().length > maxCharacters && line) { lines.push(line); line = word } else line = (line + ' ' + word).trim() } if (line) lines.push(line); return lines }
+const docxToPdf = async (file) => { const result = await mammoth.extractRawText({ buffer: file.buffer }); const pdf = await PDFDocument.create(); const font = await pdf.embedFont(StandardFonts.Helvetica); let page = pdf.addPage([595.28, 841.89]); let y = page.getHeight() - 56; const addPageIfNeeded = () => { if (y < 54) { page = pdf.addPage([595.28, 841.89]); y = page.getHeight() - 56 } }; for (const paragraph of result.value.split(/\r?\n/)) { const lines = wrapText(paragraph || ' '); for (const line of lines) { addPageIfNeeded(); page.drawText(line, { x: 48, y, size: 11, font }); y -= 17 } y -= 7 } return pdf.save() }
+const pdfToDocx = async (file) => { const document = await pdfjsLib.getDocument({ data: new Uint8Array(file.buffer) }).promise; const children = []; for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) { const page = await document.getPage(pageNumber); const content = await page.getTextContent(); const text = content.items.map((item) => 'str' in item ? item.str : '').join(' ').replace(/\s+/g, ' ').trim(); children.push(new Paragraph({ text: `Page ${pageNumber}`, heading: HeadingLevel.HEADING_1 })); children.push(new Paragraph({ children: [new TextRun(text || '[No selectable text on this page]')] })); } return Packer.toBuffer(new Document({ sections: [{ children }] })) }
 
 app.post('/api/convert', upload.array('files', 20), async (request, response) => {
   const body = request.body || {}
@@ -28,6 +33,14 @@ app.post('/api/convert', upload.array('files', 20), async (request, response) =>
   if (!files.length) return response.status(400).json({ error: 'Upload at least one file.' })
 
   try {
+    if (tool === 'WORD to PDF') {
+      if (files.length !== 1 || !/\.docx$/i.test(files[0].originalname)) return response.status(400).json({ error: 'WORD to PDF accepts one .docx file.' })
+      return pdfResponse(response, await docxToPdf(files[0]), 'word-to-pdf.pdf')
+    }
+    if (tool === 'PDF to WORD') {
+      if (files.length !== 1 || files[0].mimetype !== 'application/pdf') return response.status(400).json({ error: 'PDF to WORD accepts one PDF file.' })
+      return response.type('application/vnd.openxmlformats-officedocument.wordprocessingml.document').attachment('pdf-to-word.docx').send(await pdfToDocx(files[0]))
+    }
     if (tool === 'JPG to PDF') {
       const pdf = await PDFDocument.create()
       for (const file of files) {
